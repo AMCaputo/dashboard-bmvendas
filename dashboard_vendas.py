@@ -22,9 +22,9 @@ try:
     UTILIZADORES = {u: make_hash(p) for u, p in st.secrets["utilizadores"].items()}
 except Exception:
     UTILIZADORES = {
-        "admin":  make_hash("admin123"),
-        "gestor": make_hash("gestor2024"),
-        "vendas": make_hash("vendas2024"),
+        "admin":  make_hash("9de304d93bd520081197f916428edea3d6efca19b076746afba9e58a8eaeec62"),
+        "gestor": make_hash("f4721d147a10d4c1235cdfe5522fef0cdb3d9079d65dd7c4b944985e850bbeba"),
+        "vendas": make_hash("9804ae817bec7d2b84ef26b6c259acdea380772ba27d6d7d4035be46acb4572f"),
     }
 
 # ── Configuração da página ───────────────────────────────────────────
