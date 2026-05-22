@@ -15,10 +15,9 @@ def make_hash(senha):
     return hashlib.sha256(senha.encode()).hexdigest()
 
 UTILIZADORES = {
-    "admin":   make_hash("admin1977"),
-    "gestor":  make_hash("gestor2024"),
-    "vendas":  make_hash("vendas2024"),
+    u: make_hash(p) for u, p in st.secrets["utilizadores"].items()
 }
+
 
 # ── Configuração da página ───────────────────────────────────────────
 st.set_page_config(page_title="Dashboard de Vendas - B Mussungo & Filhos Comércio Geral, Lda.", page_icon="📊", layout="wide")
