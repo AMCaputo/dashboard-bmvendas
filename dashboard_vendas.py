@@ -2,6 +2,8 @@ import pandas as pd
 import streamlit as st
 import plotly.express as px
 import hashlib
+import requests
+import io
 
 # ══════════════════════════════════════════════════════════════════
 #  UTILIZADORES AUTORIZADOS
@@ -14,13 +16,19 @@ import hashlib
 def make_hash(senha):
     return hashlib.sha256(senha.encode()).hexdigest()
 
-UTILIZADORES = {
-    u: make_hash(p) for u, p in st.secrets["utilizadores"].items()
-}
-
+# Ler utilizadores dos Secrets do Streamlit Cloud
+# Em desenvolvimento local, usa o dicionario abaixo como fallback
+try:
+    UTILIZADORES = {u: make_hash(p) for u, p in st.secrets["utilizadores"].items()}
+except Exception:
+    UTILIZADORES = {
+        "admin":  make_hash("admin123"),
+        "gestor": make_hash("gestor2024"),
+        "vendas": make_hash("vendas2024"),
+    }
 
 # ── Configuração da página ───────────────────────────────────────────
-st.set_page_config(page_title="Dashboard de Vendas - B Mussungo & Filhos Comércio Geral, Lda.", page_icon="📊", layout="wide")
+st.set_page_config(page_title="Dashboard de Vendas", page_icon="📊", layout="wide")
 
 # ── CSS global ───────────────────────────────────────────────────────
 st.markdown("""
@@ -97,7 +105,7 @@ st.markdown("""
     /* Cards de ano */
     .card-ano {
         background: linear-gradient(135deg, #1a1d27, #2e3250);
-        border: 1px solid #f0f0f0;
+        border: 1px solid #00d4aa;
         border-radius: 12px;
         padding: 16px 20px;
         text-align: center;
@@ -169,27 +177,36 @@ if not st.session_state["autenticado"]:
 # ══════════════════════════════════════════════════════════════════
 
 # ── Carregar dados ───────────────────────────────────────────────────
-@st.cache_data
+@st.cache_data(ttl=3600)
 def carregar_dados():
-    df = pd.read_excel("bmvendas.xlsx")
+    # Tenta ler do Google Sheets (producao) ou do ficheiro local (desenvolvimento)
+    try:
+        sheet_id = st.secrets["SHEET_ID"]
+        url = f"https://docs.google.com/spreadsheets/d/{sheet_id}/export?format=xlsx"
+        resp = requests.get(url, timeout=30)
+        resp.raise_for_status()
+        df = pd.read_excel(io.BytesIO(resp.content))
+    except Exception:
+        # Fallback local para desenvolvimento
+        df = pd.read_excel("bmvendas.xlsx")
+
     df["Data_venda"] = pd.to_datetime(df["Data_venda"], errors="coerce")
     if "Ano" not in df.columns:
         df["Ano"] = df["Data_venda"].dt.year
     if "Mes" not in df.columns:
-        col_mes = "Mes" if "Mes" in df.columns else ("Mês" if "Mês" in df.columns else None)
+        col_mes = "Mes" if "Mes" in df.columns else ("Mes" if "Mes" in df.columns else None)
         df["Mes"] = df[col_mes] if col_mes else df["Data_venda"].dt.month
     if "mes_extenso_pt" not in df.columns:
-        meses_pt = {1:"Janeiro",2:"Fevereiro",3:"Março",4:"Abril",5:"Maio",6:"Junho",
+        meses_pt = {1:"Janeiro",2:"Fevereiro",3:"Marco",4:"Abril",5:"Maio",6:"Junho",
                     7:"Julho",8:"Agosto",9:"Setembro",10:"Outubro",11:"Novembro",12:"Dezembro"}
         df["mes_extenso_pt"] = df["Mes"].map(meses_pt)
     if "Trimestre" not in df.columns:
         df["Trimestre"] = df["Mes"].apply(lambda m: f"T{(m-1)//3+1}")
     return df
 
-try:
-    vendas_df = carregar_dados()
-except FileNotFoundError:
-    st.error("Ficheiro 'bmvendas.xlsx' nao encontrado.")
+vendas_df = carregar_dados()
+if vendas_df is None or vendas_df.empty:
+    st.error("Nao foi possivel carregar os dados. Verifica o Google Sheets ou o ficheiro local.")
     st.stop()
 
 CORES = px.colors.qualitative.Bold
@@ -256,7 +273,7 @@ if tem_semana and semana_sel:
 df = vendas_df[mask].copy()
 
 # ── CABECALHO ────────────────────────────────────────────────────────
-st.title("Dashboard de Vendas - B Mussungo & Filhos Comércio Geral, Lda.")
+st.title("Dashboard de Vendas")
 st.caption(f"A mostrar {len(df):,} registos filtrados de {len(vendas_df):,} totais")
 st.divider()
 
