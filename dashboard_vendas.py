@@ -28,7 +28,7 @@ except Exception:
     }
 
 # ── Configuração da página ───────────────────────────────────────────
-st.set_page_config(page_title="Dashboard de Vendas", page_icon="📊", layout="wide")
+st.set_page_config(page_title="Dashboard de Vendas - B Mussungo & Filhos Comércio Geral, Lda.", page_icon="📊", layout="wide")
 
 # ── CSS global ───────────────────────────────────────────────────────
 st.markdown("""
@@ -105,7 +105,7 @@ st.markdown("""
     /* Cards de ano */
     .card-ano {
         background: linear-gradient(135deg, #1a1d27, #2e3250);
-        border: 1px solid #00d4aa;
+        border: 1px solid #f0f0f0;
         border-radius: 12px;
         padding: 16px 20px;
         text-align: center;
@@ -179,15 +179,21 @@ if not st.session_state["autenticado"]:
 # ── Carregar dados ───────────────────────────────────────────────────
 @st.cache_data(ttl=3600)
 def carregar_dados():
-    # Tenta ler do Google Sheets (producao) ou do ficheiro local (desenvolvimento)
-    try:
+    # Verifica se SHEET_ID existe nos secrets (Streamlit Cloud)
+    if "SHEET_ID" in st.secrets:
         sheet_id = st.secrets["SHEET_ID"]
         url = f"https://docs.google.com/spreadsheets/d/{sheet_id}/export?format=xlsx"
         resp = requests.get(url, timeout=30)
-        resp.raise_for_status()
+        if resp.status_code != 200:
+            st.error(f"Erro ao aceder ao Google Sheets: HTTP {resp.status_code}. Verifica se a folha esta partilhada como publica.")
+            st.stop()
         df = pd.read_excel(io.BytesIO(resp.content))
-    except Exception:
-        # Fallback local para desenvolvimento
+    else:
+        # Ambiente local sem secrets - usa ficheiro Excel
+        import os
+        if not os.path.exists("bmvendas.xlsx"):
+            st.error("Ficheiro bmvendas.xlsx nao encontrado e SHEET_ID nao configurado nos Secrets.")
+            st.stop()
         df = pd.read_excel("bmvendas.xlsx")
 
     df["Data_venda"] = pd.to_datetime(df["Data_venda"], errors="coerce")
@@ -206,7 +212,7 @@ def carregar_dados():
 
 vendas_df = carregar_dados()
 if vendas_df is None or vendas_df.empty:
-    st.error("Nao foi possivel carregar os dados. Verifica o Google Sheets ou o ficheiro local.")
+    st.error("Dados vazios. Verifica o Google Sheets.")
     st.stop()
 
 CORES = px.colors.qualitative.Bold
@@ -273,7 +279,7 @@ if tem_semana and semana_sel:
 df = vendas_df[mask].copy()
 
 # ── CABECALHO ────────────────────────────────────────────────────────
-st.title("Dashboard de Vendas")
+st.title("Dashboard de Vendas - B Mussungo & Filhos Comércio Geral, Lda.")
 st.caption(f"A mostrar {len(df):,} registos filtrados de {len(vendas_df):,} totais")
 st.divider()
 
