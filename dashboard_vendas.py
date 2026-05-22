@@ -18,6 +18,7 @@ def make_hash(senha):
 
 # Ler utilizadores dos Secrets do Streamlit Cloud
 # Em desenvolvimento local, usa o dicionario abaixo como fallback
+
 try:
     UTILIZADORES = {u: make_hash(p) for u, p in st.secrets["utilizadores"].items()}
 except Exception:
@@ -26,9 +27,8 @@ except Exception:
         "gestor": make_hash("f4721d147a10d4c1235cdfe5522fef0cdb3d9079d65dd7c4b944985e850bbeba"),
         "vendas": make_hash("9804ae817bec7d2b84ef26b6c259acdea380772ba27d6d7d4035be46acb4572f"),
     }
-
 # ── Configuração da página ───────────────────────────────────────────
-st.set_page_config(page_title="Dashboard de Vendas - B Mussungo & Filhos Comércio Geral, Lda.", page_icon="📊", layout="wide")
+st.set_page_config(page_title="Dashboard de Vendas - B Mussungo & Filhos Comércio Geral Lda", page_icon="📊", layout="wide")
 
 # ── CSS global ───────────────────────────────────────────────────────
 st.markdown("""
@@ -182,10 +182,14 @@ def carregar_dados():
     # Verifica se SHEET_ID existe nos secrets (Streamlit Cloud)
     if "SHEET_ID" in st.secrets:
         sheet_id = st.secrets["SHEET_ID"]
-        url = f"https://docs.google.com/spreadsheets/d/{sheet_id}/export?format=xlsx"
+        gid       = st.secrets.get("SHEET_GID", "0")
+        url = f"https://docs.google.com/spreadsheets/d/{sheet_id}/export?format=xlsx&gid={gid}"
+        st.sidebar.caption(f"A carregar dados do Google Sheets...")
         resp = requests.get(url, timeout=30)
         if resp.status_code != 200:
-            st.error(f"Erro ao aceder ao Google Sheets: HTTP {resp.status_code}. Verifica se a folha esta partilhada como publica.")
+            st.error(f"Erro HTTP {resp.status_code} ao aceder ao Google Sheets.")
+            st.error(f"URL tentado: `{url}`")
+            st.info("Verifica: 1) SHEET_ID correcto nos Secrets  2) Folha partilhada como publica  3) SHEET_GID correcto")
             st.stop()
         df = pd.read_excel(io.BytesIO(resp.content))
     else:
@@ -279,7 +283,7 @@ if tem_semana and semana_sel:
 df = vendas_df[mask].copy()
 
 # ── CABECALHO ────────────────────────────────────────────────────────
-st.title("Dashboard de Vendas - B Mussungo & Filhos Comércio Geral, Lda.")
+st.title("Dashboard de Vendas - B Mussungo & Filhos Comércio Geral Lda")
 st.caption(f"A mostrar {len(df):,} registos filtrados de {len(vendas_df):,} totais")
 st.divider()
 
